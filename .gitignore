@@ -1,0 +1,4 @@
+#stuff not needed for commits
+
+/test*
+/src/datasetSimulation/__pycache__/
