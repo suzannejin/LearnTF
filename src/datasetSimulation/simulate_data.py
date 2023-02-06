@@ -71,13 +71,13 @@ class SimulatedData:
         """
 
         start_index = 0
-        ppm_length = ppm.shape[0]
+        ppm_length = ppm.shape[1]
         # Set score to the mininum
         sequence_score = -math.inf
         # Compute the score of all possible DNA chunks
         # Store the maximum
         while start_index < len(sequence)-ppm_length+1:
-            chunk = sequence[start_index: int(start_index + ppm_length -1)]
+            chunk = sequence[start_index: int(start_index + ppm_length)]
             score = self.score_chunk_seq_with_ppm(chunk, ppm)
             if(sequence_score < score):
                 sequence_score = score
@@ -95,7 +95,7 @@ class SimulatedData:
 
         score (float): score from the PPM for the input sequence
         """
-
+        
         # Convert sequence to a one-hot-encode (ACTG)
         mask = self._onehote(seq)
 
@@ -138,10 +138,6 @@ class SimulatedData:
         enriched_seq (str) : The DNA sequence enriched with PPM
         """
 
-        print(dna_seq)
-        print(ppm)
-        print(ppm.shape)
-
         # create DNA chunk matching the given PPM matrix
         bps   = ['A', 'C', 'G', 'T']
         npos  = ppm.shape[1]
@@ -149,7 +145,7 @@ class SimulatedData:
         for i in range(npos):
             pos_distr  = ppm[:,i]
             current_bp = random.choices(bps, pos_distr)
-            chunk.append(current_bp)
+            chunk += current_bp
 
         # modify DNA sequence
         start = random.choice(range(len(dna_seq)-npos))
@@ -182,4 +178,6 @@ class SimulatedData:
             letter[value] = 1
             onehot_encoded.append(letter)
 
-        return onehot_encoded
+        one_hot_encoded_sequence = np.array(onehot_encoded).transpose()
+
+        return one_hot_encoded_sequence

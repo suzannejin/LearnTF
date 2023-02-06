@@ -23,7 +23,7 @@ class TfFamily:
         return self.data
 
     def get_ppms(self):
-        return self.data["ppm"].values.transpose()
+        return [ppm.transpose() for ppm in self.data["ppm"].values]
 
     @staticmethod
     def _parseProt(prot_file):

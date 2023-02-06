@@ -25,4 +25,6 @@ if __name__ == "__main__":
     args = get_args()
     tf_data = TfFamily(args.ppm, args.prot)
     simulated_data = SimulatedData(tf_data)
-    simulated_data.simulate_data()
+    simulated_data.simulate_data(l=50, n=10)
+    print(simulated_data.scores.max())
+
