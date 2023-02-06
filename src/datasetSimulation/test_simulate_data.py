@@ -6,13 +6,13 @@ class SimulateDataTestCase(unittest.TestCase):
     def setUp(self):
             self.SData = SimulatedData(TfFamily("test_TFFamilyData/test_PWM.txt","test_TFFamilyData/test_prot_seq.txt" ))
 
-    def test_onehote(self, sequence):
+    def test_onehote(self):
         sequence = "ACTG"
         encoding = [[1,0,0,0],
                     [0,1,0,0],
                     [0,0,1,0],
                     [0,0,0,1]]
-        assert (self.SData._onehote(sequence) == encoding)
+        self.assertEqual(self.SData._onehote(sequence) , encoding)
 
         
 
