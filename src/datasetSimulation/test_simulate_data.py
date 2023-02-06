@@ -1,22 +1,19 @@
 import unittest
 from simulate_data import SimulatedData
 
-class SimulateDataTestCase(unittest.TestCase): 
-    
-
-    def test_dna_seq_random_generator(self):
-        SimulatedData.generate_list_dna_seq
+class SimulateDataTestCase(unittest.TestCase):
 
 
-    #TODO 
-    def test_onehote():
+
+    def test_onehote(sequence):
         sequence = "ACTG"
-        encoding = [[1,0,0,0], 
-                    [0,1,0,0], 
+        encoding = [[1,0,0,0],
+                    [0,1,0,0],
                     [0,0,1,0],
                     [0,0,0,1]]
-        assertEqual(onehote(sequence), encoding)
-    
+        assert onehote(sequence) == encoding
+        
+
     #TODO
     def test_score_dna_seq_with_pwm(self):
         self.assertEqual(1,1)
