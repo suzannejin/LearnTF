@@ -138,6 +138,10 @@ class SimulatedData:
         enriched_seq (str) : The DNA sequence enriched with PPM
         """
 
+        print(dna_seq)
+        print(ppm)
+        print(ppm.shape)
+
         # create DNA chunk matching the given PPM matrix
         bps   = ['A', 'C', 'G', 'T']
         npos  = ppm.shape[1]

@@ -15,5 +15,5 @@ class SimulateDataTestCase(unittest.TestCase):
         
 
     #TODO
-    def test_score_dna_seq_with_pwm(self):
+    def test_score_dna_seq_with_ppm(self):
         self.assertEqual(1,1)
