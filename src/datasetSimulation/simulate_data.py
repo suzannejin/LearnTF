@@ -11,27 +11,23 @@ class SimulatedData:
 
     This class constructs a simulation dataset from raw data.
 
-    TODO: GOAL IS TO HAVE THE FOLLOWING TABLE AT THE END : 
-    # identifier (tf-ppm id;) # sequences # prot sequence # score #
-    # T095100_1.02;M0931_1.02 # ATCGTA..  #   MVHHMYTC..  # 0.98 
-    #            ---          #     --    #      --       #
-    
-    Then, we will have a "ready to go" training dataset
     
     TODO: Mathys 07/02/23 -> I have modified a few function that were slow/didn't output the correct results; 
     including: 
     * scoring function that became _convolve (because maybe in the future we will have multiple scoring functions). 
-    Note (TODO) _convolve function is naïve and would be over 30x more performant if it would use numpy array broadcasting.
+    Note: TODO _convolve function is naïve and would much more performant if it was able to score EVERYTHING AT ONCE using np broadcasting
 
     * one hot enconding function; now uses sklearn which doesn't need to specify an alphabet -> useful for encoding both protein and dna sequences
 
-    What is left TODO: is to use these functions in order to build the affordmentioned table; I have also added helper functions in TfFamily in order to get tf-ppm id and prot sequences
+    TODO: it seems that ppm augmented sequences do not produce a higher score than non-augmented ppm sequences when scanning for the associated ppm.
 
 
     """
 
     def __init__(self, TfFamily):
         self.TfFamily = TfFamily
+        self.prot_sequences = TfFamily.get_prot_sequences()
+        self.identifiers = TfFamily.get_identifiers()
 
 
     def simulate_data(self, l=100, n=100):
@@ -45,18 +41,28 @@ class SimulatedData:
         Output
         ------
         scores  (numpy array of float) : List scores matching a DNA sequence with a PPM
+
         """
 
         # create empty numpy array
         self.dna_seqs = self.generate_list_dna_seq_for_all_ppms(l, n)
-        scores = np.empty((len(self.TfFamily.get_ppms()), len(self.TfFamily.get_ppms()) * len(self.dna_seqs)), dtype = float)
+        scores = np.zeros((len(self.TfFamily.get_ppms()), len(self.dna_seqs)), dtype = float)
 
         # compute score for each PPM and DNA sequence
         for i,ppm in enumerate(self.TfFamily.get_ppms()):
             for j,seq in enumerate(self.dna_seqs):
-                scores[i,j] = self.score_sequence(seq, ppm)
+                seq_array = self._sequence_to_array(seq)
+                one_hot = self._onehote(seq_array)
+                scores[i,j] = self._convolve(ppm, one_hot).max()
 
         self.scores = scores
+
+    def get_training_dataset(self):
+        """
+        Returns the dataset, should only be called after running "simulate data"
+        """
+
+        return self.identifiers, self.prot_sequences, self.dna_seqs, self.scores
 
     def generate_list_dna_seq_for_all_ppms(self, l=100, n=100):
         """ For each PPM, generate the enriched random DNA sequences. 
@@ -72,10 +78,7 @@ class SimulatedData:
         dna_seqs (list of str)   : List of DNA sequences
         """
         dna_seqs = []
-        identifiers = []
-        prot_sequence = []
-        ppm_ids = self.TfFamily.get_identifiers()
-        for i, ppm in self.TfFamily.get_ppms():
+        for ppm in self.TfFamily.get_ppms():
             for _ in range(n):
                 dna_seq = self._generate_random_dna_seq(l)
                 dna_seq = self._enrich_dna_seq_with_ppm(dna_seq, ppm)
@@ -109,6 +112,7 @@ class SimulatedData:
         Output
         ------
         enriched_seq (str) : The DNA sequence enriched with PPM
+
         """
 
         # create DNA chunk matching the given PPM matrix
@@ -162,12 +166,12 @@ class SimulatedData:
         onehot_encoded = np.delete(onehot_encoded, -1, 1)
         return onehot_encoded.transpose()
 
-    # TODO: Protein encoder that takes as input a sequences array and returns an encoded protein
+    # TODO: Protein encoder that takes as input a sequences array and returns an encoded protein <- actually, should we do it here ? or during model training? 
 
     @staticmethod
     def _convolve(ppm, one_hot_seq):
         """
-        Computes the convolution operation between a one hot encoded sequence (arr_2) and a ppm (arr_1)
+        Computes the convolution operation between a one hot encoded sequence and a ppm
         """
         W = ppm.shape[1] # Window size
         L = one_hot_seq.shape[1]-W+1 # Find out about output size

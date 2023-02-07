@@ -28,6 +28,9 @@ class TfFamily:
     def get_identifiers(self):
         return self.data["TF_ppm_id"].values
 
+    def get_prot_sequences(self):
+        return self.data["prot"].values
+
     @staticmethod
     def _parseProt(prot_file):
         """
