@@ -1,11 +1,34 @@
 import numpy as np
 import random
 import math
+import re
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
 
 class SimulatedData:
+    """
+
+    This class constructs a simulation dataset from raw data.
+
+    TODO: GOAL IS TO HAVE THE FOLLOWING TABLE AT THE END : 
+    # identifier (tf-ppm id;) # sequences # prot sequence # score #
+    # T095100_1.02;M0931_1.02 # ATCGTA..  #   MVHHMYTC..  # 0.98 
+    #            ---          #     --    #      --       #
+    
+    Then, we will have a "ready to go" training dataset
+    
+    TODO: Mathys 07/02/23 -> I have modified a few function that were slow/didn't output the correct results; 
+    including: 
+    * scoring function that became _convolve (because maybe in the future we will have multiple scoring functions). 
+    Note (TODO) _convolve function is naïve and would be over 30x more performant if it would use numpy array broadcasting.
+
+    * one hot enconding function; now uses sklearn which doesn't need to specify an alphabet -> useful for encoding both protein and dna sequences
+
+    What is left TODO: is to use these functions in order to build the affordmentioned table; I have also added helper functions in TfFamily in order to get tf-ppm id and prot sequences
+
+
+    """
 
     def __init__(self, TfFamily):
         self.TfFamily = TfFamily
@@ -25,18 +48,17 @@ class SimulatedData:
         """
 
         # create empty numpy array
-        ppms = self.TfFamily.get_ppms()
-        self.dna_seqs = self.generate_list_dna_seq_for_all_ppms(ppms, l, n)
-        scores = np.empty((len(ppms), len(ppms) * len(self.dna_seqs)), dtype = float)
+        self.dna_seqs = self.generate_list_dna_seq_for_all_ppms(l, n)
+        scores = np.empty((len(self.TfFamily.get_ppms()), len(self.TfFamily.get_ppms()) * len(self.dna_seqs)), dtype = float)
 
         # compute score for each PPM and DNA sequence
-        for i,ppm in enumerate(ppms):
+        for i,ppm in enumerate(self.TfFamily.get_ppms()):
             for j,seq in enumerate(self.dna_seqs):
                 scores[i,j] = self.score_sequence(seq, ppm)
 
         self.scores = scores
 
-    def generate_list_dna_seq_for_all_ppms(self, ppms, l=100, n=100):
+    def generate_list_dna_seq_for_all_ppms(self, l=100, n=100):
         """ For each PPM, generate the enriched random DNA sequences. 
       
         Params
@@ -50,64 +72,15 @@ class SimulatedData:
         dna_seqs (list of str)   : List of DNA sequences
         """
         dna_seqs = []
-        for ppm in ppms:
-            for i in range(n):
+        identifiers = []
+        prot_sequence = []
+        ppm_ids = self.TfFamily.get_identifiers()
+        for i, ppm in self.TfFamily.get_ppms():
+            for _ in range(n):
                 dna_seq = self._generate_random_dna_seq(l)
                 dna_seq = self._enrich_dna_seq_with_ppm(dna_seq, ppm)
                 dna_seqs.append(dna_seq)
         return dna_seqs
-
-    def score_sequence(self, sequence, ppm):
-        """
-        Scores a DNA sequence of length N given a PPM of length M
-        Scans the DNA sequence and estimates the score for each chunk with the PPM.
-        Returns the maximum score.
-
-        seq (string) : DNA sequence
-        ppm (matrix) : a ppm in form of numpy matrix
-
-        score (float): maximum score of a DNA chunk on sequence seq as evaluated
-                       by ppm.
-        """
-
-        start_index = 0
-        ppm_length = ppm.shape[1]
-        # Set score to the mininum
-        sequence_score = -math.inf
-        # Compute the score of all possible DNA chunks
-        # Store the maximum
-        while start_index < len(sequence)-ppm_length+1:
-            chunk = sequence[start_index: int(start_index + ppm_length)]
-            score = self.score_chunk_seq_with_ppm(chunk, ppm)
-            if(sequence_score < score):
-                sequence_score = score
-            start_index+=1
-
-        return sequence_score
-    
-
-    def score_chunk_seq_with_ppm(self, seq, ppm):
-        """
-        Scores a DNA sequence of length N given a PPM with N positions
-
-        seq (string) : DNA sequence
-        ppm (matrix) : a ppm in form of numpy matrix
-
-        score (float): score from the PPM for the input sequence
-        """
-        
-        # Convert sequence to a one-hot-encode (ACTG)
-        mask = self._onehote(seq)
-
-        # Extract scores from the PPM for each position
-        masked_ppm = np.ma.masked_array(ppm, mask=mask)
-
-        # Sum them up to obtain the final score for the sequence
-        # If we were working with PPMs
-        # score = sum(masked_pwm)
-        score = np.ndarray.prod(masked_ppm, where = mask.astype(bool)).item()
-
-        return score
 
     @staticmethod
     def _generate_random_dna_seq(l=100):
@@ -157,27 +130,49 @@ class SimulatedData:
         return enriched_seq
 
     @staticmethod
-    def _onehote(sequence):
+    def _sequence_to_array(sequence):
+        """
+        This function converts a string of nucleotides in an numpy array
+
+        :param sequence:
+        :return sequence_array:
+
+
+        """
+        sequence = sequence.lower()
+        sequence = re.sub('[^acgt]', 'z', sequence)
+        sequence_array = np.array(list(sequence))
+        return sequence_array
+
+    @staticmethod
+    def _onehote(sequence_array):
         """
         One-hot-encodes a DNA sequence
 
-        sequence (string): input DNA sequence
+        sequence (np.array): input DNA sequence in a np array format
 
         onehot_encoded_seq (matrix): one-hot-encoded sequence
         """
 
-        alphabet = ['A', 'C', 'G', 'T']
-        seq_array = np.array(list(sequence))
+        label_encoder = LabelEncoder()
+        integer_encoded = label_encoder.fit_transform(sequence_array)
+        onehot_encoder = OneHotEncoder(sparse=False, dtype=int, categories=[range(5)])
+        integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+        onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+        onehot_encoded = np.delete(onehot_encoded, -1, 1)
+        return onehot_encoded.transpose()
 
-        char_to_int = dict((c, i) for i, c in enumerate(alphabet))
-        integer_encoded = [char_to_int[char] for char in sequence]
-        onehot_encoded = list()
+    # TODO: Protein encoder that takes as input a sequences array and returns an encoded protein
 
-        for value in integer_encoded:
-            letter = [0 for _ in range(len(alphabet))]
-            letter[value] = 1
-            onehot_encoded.append(letter)
-
-        one_hot_encoded_sequence = np.array(onehot_encoded).transpose()
-
-        return one_hot_encoded_sequence
+    @staticmethod
+    def _convolve(ppm, one_hot_seq):
+        """
+        Computes the convolution operation between a one hot encoded sequence (arr_2) and a ppm (arr_1)
+        """
+        W = ppm.shape[1] # Window size
+        L = one_hot_seq.shape[1]-W+1 # Find out about output size
+        out = np.zeros(L) # Create output
+        for i in range(L): 
+            # For each sliding window, compute sum(ppm * seqlet) // convolution
+            out[i] = np.multiply(ppm, one_hot_seq[:,i:i+W]).sum()
+        return out

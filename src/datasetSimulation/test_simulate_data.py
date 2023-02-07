@@ -12,10 +12,11 @@ class SimulateDataTestCase(unittest.TestCase):
                     [0,1,0,0],
                     [0,0,1,0],
                     [0,0,0,1]]
+        sequence = self.SData._sequence_to_array(sequence)
         self.assertEqual(self.SData._onehote(sequence) , encoding)
 
         
 
-    #TODO
+    # TODO:
     def test_score_dna_seq_with_ppm(self):
         self.assertEqual(1,1)

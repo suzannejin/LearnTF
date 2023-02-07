@@ -25,6 +25,9 @@ class TfFamily:
     def get_ppms(self):
         return [ppm.transpose() for ppm in self.data["ppm"].values]
 
+    def get_identifiers(self):
+        return self.data["TF_ppm_id"].values
+
     @staticmethod
     def _parseProt(prot_file):
         """
