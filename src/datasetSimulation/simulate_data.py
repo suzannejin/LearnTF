@@ -51,8 +51,8 @@ class SimulatedData:
         # compute score for each PPM and DNA sequence
         for i,ppm in enumerate(self.TfFamily.get_ppms()):
             for j,seq in enumerate(self.dna_seqs):
-                seq_array = self._sequence_to_array(seq)
-                one_hot = self._onehote(seq_array)
+                # seq = self._sequence_to_array(seq) Uncomment this line once sklearn encoder has been fixed.
+                one_hot = self._onehote(seq)
                 scores[i,j] = self._convolve(ppm, one_hot).max()
 
         self.scores = scores
@@ -147,24 +147,15 @@ class SimulatedData:
         sequence = re.sub('[^acgt]', 'z', sequence)
         sequence_array = np.array(list(sequence))
         return sequence_array
-
+    
     @staticmethod
-    def _onehote(sequence_array):
-        """
-        One-hot-encodes a DNA sequence
+    def _onehote(seq):
+        seq2=list()
+        mapping = {"A":[1., 0., 0., 0.], "C": [0., 1., 0., 0.], "G": [0., 0., 1., 0.], "T":[0., 0., 0., 1.]}
+        for i in seq:
+            seq2.append(mapping[i]  if i in mapping.keys() else [0., 0., 0., 0.]) 
+        return np.stack(seq2).transpose()
 
-        sequence (np.array): input DNA sequence in a np array format
-
-        onehot_encoded_seq (matrix): one-hot-encoded sequence
-        """
-
-        label_encoder = LabelEncoder()
-        integer_encoded = label_encoder.fit_transform(sequence_array)
-        onehot_encoder = OneHotEncoder(sparse=False, dtype=int, categories=[range(5)])
-        integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
-        onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
-        onehot_encoded = np.delete(onehot_encoded, -1, 1)
-        return onehot_encoded.transpose()
 
     # TODO: Protein encoder that takes as input a sequences array and returns an encoded protein <- actually, should we do it here ? or during model training? 
 
@@ -180,3 +171,22 @@ class SimulatedData:
             # For each sliding window, compute sum(ppm * seqlet) // convolution
             out[i] = np.multiply(ppm, one_hot_seq[:,i:i+W]).sum()
         return out
+
+
+""" TODO: rewrite encoder to encode the whole dataset; as it is now this method has some flaws (f.e. ATAA converts to ACAA in one hot matrix)
+    @staticmethod
+    def _onehote(sequence_array):
+        One-hot-encodes a DNA sequence
+
+        sequence (np.array): input DNA sequence in a np array format
+
+        onehot_encoded_seq (matrix): one-hot-encoded sequence
+
+        label_encoder = LabelEncoder()
+        integer_encoded = label_encoder.fit_transform(sequence_array)
+        onehot_encoder = OneHotEncoder(sparse=False, dtype=int, categories=[range(5)])
+        integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
+        onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
+        onehot_encoded = np.delete(onehot_encoded, -1, 1)
+        return onehot_encoded.transpose()
+"""
