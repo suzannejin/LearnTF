@@ -32,6 +32,11 @@ class TfFamily:
         return self.data["prot"].values
 
     @staticmethod
+    def _get_pwm_from_ppm(ppm, background = np.array([0.25,0.25,0.25,0.25])):
+            m = ppm.transpose()/background
+            return np.log2(ppm.transpose()) 
+
+    @staticmethod
     def _parseProt(prot_file):
         """
         helper for parsing a protein file as defined in README.md 
