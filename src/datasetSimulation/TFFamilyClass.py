@@ -32,9 +32,28 @@ class TfFamily:
         return self.data["prot"].values
 
     @staticmethod
-    def _get_pwm_from_ppm(ppm, background = np.array([0.25,0.25,0.25,0.25])):
-            m = ppm.transpose()/background
-            return np.log2(ppm.transpose()) 
+    def get_pwm_from_ppm(ppm, bg = np.array([0.25,0.25,0.25,0.25]), infval= -5000):
+        """
+        Converts a ppm into a pwm given a background.
+
+        Params
+        ------
+        ppm     (numpy float array) : Position probability matrix. rows = ACGT, cols = positions
+        bg      (numpy float array) : Vector of background probabilities (alphabetical order)
+        infval  (float)             : Value used instead of -infinite 
+        
+        Output
+        ------
+        pwm     (numpy float array) : Position wight matrix. rows = ACGT, cols = positions
+        """
+
+        # compute pwm
+        m = np.log2(ppm.T/bg)
+        
+        # substitute infinite values with infval 
+        m[np.isinf(m)] = infval
+        
+        return m.T
 
     @staticmethod
     def _parseProt(prot_file):
