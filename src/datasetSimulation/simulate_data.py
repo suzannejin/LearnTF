@@ -63,6 +63,7 @@ class SimulatedData:
         dna_seqs = self.generate_list_dna_seq_for_all_ppms()
 
         # compute score for each PPM and DNA sequence
+        pwms = self.TfFamily.get_pwms()
         for i,ppm in enumerate(self.TfFamily.get_ppms()):
             for j,seqs in enumerate(dna_seqs):
                 for k,seq in enumerate(seqs):
@@ -75,8 +76,8 @@ class SimulatedData:
                     else:
                         d['label'].append(0)
                     # seq = self._sequence_to_array(seq) Uncomment this line once sklearn encoder has been fixed.
-                    one_hot = self._onehote(seq)
-                    d['score'].append( self._convolve(ppm, one_hot).max() )
+                    one_hot = self._onehote(self._sequence_to_array(seq))
+                    d['score'].append( self._convolve(pwms[i], one_hot).max() )
         data = pd.DataFrame.from_dict(d)
         return data
 
