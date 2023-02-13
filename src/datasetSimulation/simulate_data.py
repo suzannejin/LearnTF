@@ -192,16 +192,16 @@ class SimulatedData:
 
 
     @staticmethod
-    def _convolve(ppm, one_hot_seq):
+    def _convolve(pwm, one_hot_seq):
         """
         Computes the convolution operation between a one hot encoded sequence and a ppm
         """
-        W = ppm.shape[1] # Window size
+        W = pwm.shape[1] # Window size
         L = one_hot_seq.shape[1]-W+1 # Find out about output size
         out = np.zeros(L) # Create output
         for i in range(L): 
             # For each sliding window, compute sum(ppm * seqlet) // convolution
-            out[i] = np.multiply(ppm, one_hot_seq[:,i:i+W]).sum()
+            out[i] = np.multiply(pwm, one_hot_seq[:,i:i+W]).sum()
         return out
 
 
