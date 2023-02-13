@@ -32,7 +32,7 @@ class TfFamily:
         return self.data["prot"].values
 
     @staticmethod
-    def get_pwm_from_ppm(ppm, bg = np.array([0.25,0.25,0.25,0.25]), infval= -5000):
+    def _get_pwm_from_ppm(ppm, bg = np.array([0.25,0.25,0.25,0.25]), infval= -5000):
         """
         Converts a ppm into a pwm given a background.
 

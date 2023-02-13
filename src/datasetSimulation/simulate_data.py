@@ -151,7 +151,7 @@ class SimulatedData:
     @staticmethod
     def _onehote(seq):
         seq2=list()
-        mapping = {"A":[1., 0., 0., 0.], "C": [0., 1., 0., 0.], "G": [0., 0., 1., 0.], "T":[0., 0., 0., 1.]}
+        mapping = {"a":[1., 0., 0., 0.], "c": [0., 1., 0., 0.], "g": [0., 0., 1., 0.], "t":[0., 0., 0., 1.]}
         for i in seq:
             seq2.append(mapping[i]  if i in mapping.keys() else [0., 0., 0., 0.]) 
         return np.stack(seq2).transpose()
@@ -171,6 +171,8 @@ class SimulatedData:
             # For each sliding window, compute sum(ppm * seqlet) // convolution
             out[i] = np.multiply(ppm, one_hot_seq[:,i:i+W]).sum()
         return out
+
+
 
 
 """ TODO: rewrite encoder to encode the whole dataset; as it is now this method has some flaws (f.e. ATAA converts to ACAA in one hot matrix)
