@@ -2,3 +2,4 @@
 
 /test*
 /src/datasetSimulation/__pycache__/
+/src/datasetSimulation/*.pyc
