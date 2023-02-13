@@ -1,9 +1,10 @@
 import unittest
 import os
 from TFFamilyClass import TfFamily
-
-
 import numpy as np
+
+
+
 
 
 
@@ -23,6 +24,7 @@ class TfFamilyTestCase(unittest.TestCase):
 
 
 
+
     def test_parse_PPM_uniqueID(self) -> None:
         list_right_tfID = ['T095100_1.02;M0931_1.02','T095193_1.02;M1009_1.02','T095193_1.02;M1010_1.02','T095300_1.02;M1072_1.02','T095300_1.02;M1073_1.02','T095191_1.02;M1007_1.02','T095191_1.02;M6026_1.02','T095191_1.02;M6027_1.02','T095112_1.02;M0941_1.02','T095144_1.02;M0966_1.02','T095243_1.02;M1049_1.02','T095076_1.02;M0909_1.02','T095103_1.02;M0933_1.02','T095103_1.02;M2298_1.02']
         ppm_array, _ = self.TfFamily_object._parsePPM(self.TfFamily_object.ppm_file)
@@ -37,4 +39,17 @@ class TfFamilyTestCase(unittest.TestCase):
         self.assertTrue(np.array_equal(correct_matrices2, ppm_list[2], equal_nan=True))
         self.assertTrue(np.array_equal(correct_matrices3, ppm_list[13], equal_nan=True))
         self.assertEqual(14, len(ppm_list), 'there are not the same number of matices')
+
+    def test_get_pwm_from_ppm(self) -> None:
+        bg = np.array([0.25,0.25,0.25,0.25])
+        ppm = [[0.25,0.25,0.25,0.25],
+                [0,0,0,1]]
+        ppm = np.array(ppm).T
+        infval = -5000
+        pwm = self.TfFamily_object._get_pwm_from_ppm(ppm,bg,infval)
+        test_pwm = np.array([[0,0,0,0],
+                            [-5000,-5000,-5000,2]]).T
+        self.assertTrue(np.array_equal(pwm, test_pwm))
+        self.assertEqual(ppm.shape,pwm.shape)
+
 

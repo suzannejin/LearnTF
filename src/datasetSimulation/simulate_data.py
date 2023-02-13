@@ -1,6 +1,6 @@
 import numpy as np
+import pandas as pd
 import random
-import math
 import re
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
@@ -24,66 +24,95 @@ class SimulatedData:
 
     """
 
-    def __init__(self, TfFamily):
+    def __init__(self, TfFamily, l=100, n=100):
+        """
+        For each PPM, n DNA sequences are generated randomly and enriched by the given PPM motif.
+        Thus, a total of n x number of PPMs.
+        Then, each DNA sequence is scored to each PWM.
+
+        TfFamily (class object)
+        l        (int)   : The wanted length of the DNA sequence
+        n        (int)   : Number of DNA sequences to be generated per PPM
+        """
         self.TfFamily = TfFamily
-        self.prot_sequences = TfFamily.get_prot_sequences()
-        self.identifiers = TfFamily.get_identifiers()
+        self.l = l
+        self.n = n
+        self.data = self.simulate_data()
 
 
-    def simulate_data(self, l=100, n=100):
+    def simulate_data(self):
         """ Simulate DNA sequences and score them to each PPM for the entire TF family.
-
-        Params
-        ------
-        l       (int)   : The wanted length of the DNA sequence
-        n       (int)   : Number of DNA sequences to be generated per PPM
 
         Output
         ------
         scores  (numpy array of float) : List scores matching a DNA sequence with a PPM
 
         """
+        
+        # initialize data dictionary
+        d = {
+            'id'       : [],
+            'prot_seq' : [],
+            'ppm'      : [],
+            'dna_seq'  : [],
+            'label'    : [],
+            'score'    : []
+        }
 
-        # create empty numpy array
-        self.dna_seqs = self.generate_list_dna_seq_for_all_ppms(l, n)
-        scores = np.zeros((len(self.TfFamily.get_ppms()), len(self.dna_seqs)), dtype = float)
+        # get dictionary of dna sequences for all ppms
+        dna_seqs = self.generate_list_dna_seq_for_all_ppms()
 
         # compute score for each PPM and DNA sequence
+        pwms = self.TfFamily.get_pwms()
         for i,ppm in enumerate(self.TfFamily.get_ppms()):
-            for j,seq in enumerate(self.dna_seqs):
-                # seq = self._sequence_to_array(seq) Uncomment this line once sklearn encoder has been fixed.
-                one_hot = self._onehote(seq)
-                scores[i,j] = self._convolve(ppm, one_hot).max()
+            for j,seqs in enumerate(dna_seqs):
+                for k,seq in enumerate(seqs):
+                    d['id'].append( self.TfFamily.get_identifiers()[i] )
+                    d['prot_seq'].append( self.TfFamily.get_prot_sequences()[i] )
+                    d['ppm'].append(ppm)
+                    d['dna_seq'].append(seq)
+                    if i == j:
+                        d['label'].append(1)
+                    else:
+                        d['label'].append(0)
+                    # seq = self._sequence_to_array(seq) Uncomment this line once sklearn encoder has been fixed.
+                    one_hot = self._onehote(self._sequence_to_array(seq))
+                    d['score'].append( self._convolve(pwms[i], one_hot).max() )
+        data = pd.DataFrame.from_dict(d)
+        return data
 
-        self.scores = scores
 
-    def get_training_dataset(self):
-        """
-        Returns the dataset, should only be called after running "simulate data"
-        """
-
-        return self.identifiers, self.prot_sequences, self.dna_seqs, self.scores
-
-    def generate_list_dna_seq_for_all_ppms(self, l=100, n=100):
-        """ For each PPM, generate the enriched random DNA sequences. 
-      
-        Params
-        ------
-        ppm     (list of numpy float arrays) : List of position probability matrix. rows = ACGT, cols = positions
-        l       (int)   : The wanted length of the DNA sequence
-        n       (int)   : Number of DNA sequences to be generated
+    def generate_list_dna_seq_for_all_ppms(self):
+        """ For each PPM, generate a list of random DNA sequences enriched by the motif. 
 
         Output
         ------
-        dna_seqs (list of str)   : List of DNA sequences
+        dna_seqs (list of list of str)   : List of list of DNA sequences 
         """
         dna_seqs = []
         for ppm in self.TfFamily.get_ppms():
-            for _ in range(n):
-                dna_seq = self._generate_random_dna_seq(l)
+            tmp = []
+            for _ in range(self.n):
+                dna_seq = self._generate_random_dna_seq(self.l)
                 dna_seq = self._enrich_dna_seq_with_ppm(dna_seq, ppm)
-                dna_seqs.append(dna_seq)
+                tmp.append(dna_seq)
+            dna_seqs.append(tmp)
         return dna_seqs
+
+
+    def get(self):
+        return self.data
+
+
+    def test_dna_seq_generator(self, ppm, l=100):
+        random_seq = self._generate_random_dna_seq(l)
+        enrich_seq = self._enrich_dna_seq_with_ppm(random_seq, ppm)
+        random_one_hot = self._onehote(random_seq)
+        enrich_one_hot = self._onehote(enrich_seq)
+        random_score = self._convolve(ppm, random_one_hot)
+        enrich_score = self._convolve(ppm, enrich_one_hot)
+        return random_score, enrich_score
+
 
     @staticmethod
     def _generate_random_dna_seq(l=100):
@@ -99,6 +128,7 @@ class SimulatedData:
         """
         dna_seq = ''.join(random.choice('CGTA') for _ in range(l))
         return dna_seq
+
 
     @staticmethod
     def _enrich_dna_seq_with_ppm(dna_seq, ppm):
@@ -133,6 +163,7 @@ class SimulatedData:
 
         return enriched_seq
 
+
     @staticmethod
     def _sequence_to_array(sequence):
         """
@@ -148,10 +179,11 @@ class SimulatedData:
         sequence_array = np.array(list(sequence))
         return sequence_array
     
+    
     @staticmethod
     def _onehote(seq):
         seq2=list()
-        mapping = {"A":[1., 0., 0., 0.], "C": [0., 1., 0., 0.], "G": [0., 0., 1., 0.], "T":[0., 0., 0., 1.]}
+        mapping = {"a":[1., 0., 0., 0.], "c": [0., 1., 0., 0.], "g": [0., 0., 1., 0.], "t":[0., 0., 0., 1.]}
         for i in seq:
             seq2.append(mapping[i]  if i in mapping.keys() else [0., 0., 0., 0.]) 
         return np.stack(seq2).transpose()
@@ -159,18 +191,21 @@ class SimulatedData:
 
     # TODO: Protein encoder that takes as input a sequences array and returns an encoded protein <- actually, should we do it here ? or during model training? 
 
+
     @staticmethod
-    def _convolve(ppm, one_hot_seq):
+    def _convolve(pwm, one_hot_seq):
         """
         Computes the convolution operation between a one hot encoded sequence and a ppm
         """
-        W = ppm.shape[1] # Window size
+        W = pwm.shape[1] # Window size
         L = one_hot_seq.shape[1]-W+1 # Find out about output size
         out = np.zeros(L) # Create output
         for i in range(L): 
             # For each sliding window, compute sum(ppm * seqlet) // convolution
-            out[i] = np.multiply(ppm, one_hot_seq[:,i:i+W]).sum()
+            out[i] = np.multiply(pwm, one_hot_seq[:,i:i+W]).sum()
         return out
+
+
 
 
 """ TODO: rewrite encoder to encode the whole dataset; as it is now this method has some flaws (f.e. ATAA converts to ACAA in one hot matrix)
