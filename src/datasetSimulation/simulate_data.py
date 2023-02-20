@@ -59,14 +59,17 @@ class SimulatedData:
             'score'    : []
         }
 
-        # get dictionary of dna sequences for all ppms
+        # get list of dna sequences
         dna_seqs = self.generate_list_dna_seq_for_all_ppms()
+        random_seqs = []
+        for _ in range(self.n):
+            random_seqs.append(self._generate_random_dna_seq(self.l))
 
         # compute score for each PPM and DNA sequence
         pwms = self.TfFamily.get_pwms()
         for i,ppm in enumerate(self.TfFamily.get_ppms()):
             for j,seqs in enumerate(dna_seqs):
-                for k,seq in enumerate(seqs):
+                for seq in seqs:
                     d['id'].append( self.TfFamily.get_identifiers()[i] )
                     d['prot_seq'].append( self.TfFamily.get_prot_sequences()[i] )
                     d['ppm'].append(ppm)
@@ -78,6 +81,14 @@ class SimulatedData:
                     # seq = self._sequence_to_array(seq) Uncomment this line once sklearn encoder has been fixed.
                     one_hot = self._onehote(self._sequence_to_array(seq))
                     d['score'].append( self._convolve(pwms[i], one_hot).max() )
+            for seq in random_seqs:
+                d['id'].append( self.TfFamily.get_identifiers()[i] )
+                d['prot_seq'].append( self.TfFamily.get_prot_sequences()[i] )
+                d['ppm'].append(ppm)
+                d['dna_seq'].append(seq)
+                d['label'].append(-1)
+                one_hot = self._onehote(self._sequence_to_array(seq))
+                d['score'].append( self._convolve(pwms[i], one_hot).max() )
         data = pd.DataFrame.from_dict(d)
         return data
 
@@ -126,7 +137,7 @@ class SimulatedData:
         ------
         dna_seq (str)   : Generated random DNA sequence
         """
-        dna_seq = ''.join(random.choice('CGTA') for _ in range(l))
+        dna_seq = ''.join(random.choice('ACGT') for _ in range(l))
         return dna_seq
 
 
