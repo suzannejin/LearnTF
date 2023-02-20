@@ -1,6 +1,6 @@
 import unittest
-from data_TfFamilyClass import TfFamily
-from data_SimulatedDataClass import SimulatedData
+from TFFamilyClass import TfFamily
+from simulate_data import SimulatedData
 import numpy as np 
 
 class SimulateDataTestCase(unittest.TestCase):
