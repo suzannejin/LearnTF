@@ -1,11 +1,12 @@
 import numpy as np
 import torch 
+import torch.functional as F
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 
 
 # Scaled dot product attention
-def scaled_dot_product_attention(q, k, v, mask=None, verbose=True):
+def scaled_dot_product_attention(q, k, v, mask=None, verbose=False):
     """Calculate the attention weights.
     q, k, v must have matching leading dimensions.
     k, v must have matching penultimate dimension, i.e.: seq_len_k = seq_len_v.
@@ -54,23 +55,28 @@ def scaled_dot_product_attention(q, k, v, mask=None, verbose=True):
 # class for the transformer model
 class maTransformerBlock(nn.Module):
 
-    def __init__(self, filter_protein_size, filter_dna_size, nb_heads, dna_alphabet_size=4, protein_alphabet_size=20, chunk_size=3):
+    def __init__(self, filter_protein_size, filter_dna_size, nb_heads, dna_alphabet_size=4, protein_alphabet_size=20, chunk_size=3, n_top_chunk=10, return_attention=False):
 
         super(maTransformerBlock, self).__init__()
         self.conv_dna   = nn.Conv2d(1,1, (dna_alphabet_size, filter_dna_size), bias=False)
         self.conv_prot  = nn.Conv2d(1,1, (protein_alphabet_size, filter_protein_size), bias=False)
         self.nb_heads   = nb_heads
         self.chunk_size = chunk_size
-        self.linear
+        self.n_top_chunk= n_top_chunk 
+        self.linear     = nn.Linear(self.n_top_chunk, 2)
+        self.return_attention = return_attention
 
     def forward(self, dna, prot):
 
-        # 1 - sequence embedding using convolution
+        batch_size  = dna.shape[0]
+
+        # 1 - sequence embedding using convolution and relu
         dna_conv    = self.conv_dna(dna)
+        dna_conv    = F.relu(dna_conv)
         prot_conv   = self.conv_prot(prot)
+        prot_conv   = F.relu(prot_conv)
 
         # 2 - padd dna_conv and prot_conv to have the same size
-        batch_size  = dna_conv.shape[0]
         list_dna    = list(dna_conv.reshape(batch_size, dna_conv.shape[-1]))
         list_prot   = list(prot_conv.reshape(batch_size, prot_conv.shape[-1]))
         padded      = pad_sequence(list_dna+list_prot, batch_first=True, padding_value=0)
@@ -85,8 +91,19 @@ class maTransformerBlock(nn.Module):
         s_p_reshape = stacked_p.reshape(stacked_p.shape[1], stacked_p.shape[0], stacked_p.shape[2])
 
         # 4 - apply dot product attention on concatenated chunks
-        output, attention = scaled_dot_product_attention(s_p_reshape, s_d_reshape, s_d_reshape, None)    
+        output, attention = scaled_dot_product_attention(s_p_reshape, s_d_reshape, s_d_reshape, None)
 
+        # 5 - maxpooling and sort
+        out_reshaped= output.reshape(batch_size, output.shape[1]*output.shape[2])
+        max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0][:,:,:self.n_top_chunk]
+
+        # 6 - apply linear function to get one value
+        out         = self.linear(max_sorted.reshape(batch_size, self.n_top_chunk))
+        
+        if self.return_attention:
+            return out, attention
+        else:
+            return out
 
 
 # testing the scaled dot product attention
