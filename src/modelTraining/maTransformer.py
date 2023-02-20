@@ -1,6 +1,6 @@
+import numpy as np
 import torch 
 from torch import nn
-import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 
 
@@ -52,35 +52,40 @@ def scaled_dot_product_attention(q, k, v, mask=None, verbose=True):
 
 
 # class for the transformer model
-class maTransformerBlock(nn.module):
+class maTransformerBlock(nn.Module):
+
     def __init__(self, filter_protein_size, filter_dna_size, nb_heads, dna_alphabet_size=4, protein_alphabet_size=20, chunk_size=3):
 
         super(maTransformerBlock, self).__init__()
-        self.conv_dna = nn.Conv2d(1,1, (filter_dna_size, dna_alphabet_size), biais=False)
-        self.conv_protein = nn.Conv2d(1,1, (filter_protein_size, protein_alphabet_size), biais=False)
-        self.nb_heads = nb_heads
+        self.conv_dna   = nn.Conv2d(1,1, (dna_alphabet_size, filter_dna_size), bias=False)
+        self.conv_prot  = nn.Conv2d(1,1, (protein_alphabet_size, filter_protein_size), bias=False)
+        self.nb_heads   = nb_heads
         self.chunk_size = chunk_size
         self.linear
 
     def forward(self, dna, prot):
-        dna_conv = self.conv_dna(dna)
-        prot_conv = self.conv_protein(prot)
-        # padd dna_conv and prot_conv to have the same size
-        padded = pad_sequence([dna_conv, prot_conv], batch_first=True, padding_value=0)
-        dna_conv = padded[0]
-        prot_conv = padded[1]
-        # chunk dna_conv and prot_conv
-        dna_chunks = dna_conv.chunk(self.chunk_size, dim=2)
-        prot_chunks = prot_conv.chunk(self.chunk_size, dim=2)
-        # concatenate chunks
-        dna_concat = torch.cat(dna_chunks, dim=0)
-        prot_concat = torch.cat(prot_chunks, dim=0)
-        # apply dot product attention on concatenated chunks
-        attention = scaled_dot_product_attention(dna_concat, prot_concat, dna_concat)[0]
-        return padded
 
+        # 1 - sequence embedding using convolution
+        dna_conv    = self.conv_dna(dna)
+        prot_conv   = self.conv_prot(prot)
 
-    
+        # 2 - padd dna_conv and prot_conv to have the same size
+        batch_size  = dna_conv.shape[0]
+        list_dna    = list(dna_conv.reshape(batch_size, dna_conv.shape[-1]))
+        list_prot   = list(prot_conv.reshape(batch_size, prot_conv.shape[-1]))
+        padded      = pad_sequence(list_dna+list_prot, batch_first=True, padding_value=0)
+        dna_tensor  = padded[:batch_size,:]
+        prot_tensor = padded[batch_size:,:]
+
+        # 3 - chunk dna_conv and prot_conv and stack
+        # the resulting tensor will have shape (batch size, number chunks, chunk size)
+        stacked_d   = torch.stack(torch.chunk(dna_tensor, dna_tensor.shape[1]//self.chunk_size, dim=1))
+        stacked_p   = torch.stack(torch.chunk(prot_tensor, prot_tensor.shape[1]//self.chunk_size, dim=1))
+        s_d_reshape = stacked_d.reshape(stacked_d.shape[1], stacked_d.shape[0], stacked_d.shape[2])
+        s_p_reshape = stacked_p.reshape(stacked_p.shape[1], stacked_p.shape[0], stacked_p.shape[2])
+
+        # 4 - apply dot product attention on concatenated chunks
+        output, attention = scaled_dot_product_attention(s_p_reshape, s_d_reshape, s_d_reshape, None)    
 
 
 
@@ -99,12 +104,11 @@ def test_scaled_dot_product_attention():
     print('temp_mask:', temp_mask)
 
 
-    
+    output, attention = scaled_dot_product_attention(temp_q, temp_k, temp_v)
     print('output is:')
-    print(scaled_dot_product_attention(temp_q, temp_k, temp_v)[0])  # (..., seq_len_q, depth_v)
-
+    print(output)  # (..., seq_len_q, depth_v)
     print('Attention weights are:')
-    print(scaled_dot_product_attention(temp_q, temp_k, temp_v)[1])  # (..., seq_len_q, seq_len_k)
+    print(attention)  # (..., seq_len_q, seq_len_k)
 
 
 
