@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import random
-import src.utils.preProcessing as pre
+import utils_preProcessing as pre
 
 
 class SimulatedData:
