@@ -1,25 +1,13 @@
 import numpy as np
 import pandas as pd
 import random
-import re
-from sklearn.preprocessing import LabelEncoder
-from sklearn.preprocessing import OneHotEncoder
+import src.utils.preProcessing as pre
 
 
 class SimulatedData:
     """
 
     This class constructs a simulation dataset from raw data.
-
-    
-    TODO: Mathys 07/02/23 -> I have modified a few function that were slow/didn't output the correct results; 
-    including: 
-    * scoring function that became _convolve (because maybe in the future we will have multiple scoring functions). 
-    Note: TODO _convolve function is naïve and would much more performant if it was able to score EVERYTHING AT ONCE using np broadcasting
-
-    * one hot enconding function; now uses sklearn which doesn't need to specify an alphabet -> useful for encoding both protein and dna sequences
-
-    TODO: it seems that ppm augmented sequences do not produce a higher score than non-augmented ppm sequences when scanning for the associated ppm.
 
 
     """
@@ -69,6 +57,7 @@ class SimulatedData:
         # compute score for each PPM and DNA sequence
         pwms = self.TfFamily.get_pwms()
         for i,ppm in enumerate(self.TfFamily.get_ppms()):
+            # compute scores for enriched sequences
             for j,seqs in enumerate(dna_seqs):
                 for seq in seqs:
                     d['id'].append( self.TfFamily.get_identifiers()[i] )
@@ -79,19 +68,20 @@ class SimulatedData:
                         d['label'].append(1)
                     else:
                         d['label'].append(0)
-                    # seq = self._sequence_to_array(seq) Uncomment this line once sklearn encoder has been fixed.
-                    one_hot = self._onehote(self._sequence_to_array(seq))
+                    one_hot = pre.encode_dna(seq)
                     d['score'].append( self._convolve(pwms[i], one_hot).max() )
+            # compute scores for additional random sequences
             for seq in random_seqs:
                 d['id'].append( self.TfFamily.get_identifiers()[i] )
                 d['prot_seq'].append( self.TfFamily.get_prot_sequences()[i] )
                 d['ppm'].append(ppm)
                 d['dna_seq'].append(seq)
                 d['label'].append(-1)
-                one_hot = self._onehote(self._sequence_to_array(seq))
+                one_hot = pre.encode_dna(seq)
                 d['score'].append( self._convolve(pwms[i], one_hot).max() )
         data = pd.DataFrame.from_dict(d)
         return data
+        
 
     def simulate_dummy_data(self, n=100, l=100):
         """ Simulate DNA sequences and score them to each PPM for the entire TF family.
@@ -151,20 +141,6 @@ class SimulatedData:
         return dna_seqs
 
 
-    def get(self):
-        return self.data
-
-
-    def test_dna_seq_generator(self, ppm, l=100):
-        random_seq = self._generate_random_dna_seq(l)
-        enrich_seq = self._enrich_dna_seq_with_ppm(random_seq, ppm)
-        random_one_hot = self._onehote(random_seq)
-        enrich_one_hot = self._onehote(enrich_seq)
-        random_score = self._convolve(ppm, random_one_hot)
-        enrich_score = self._convolve(ppm, enrich_one_hot)
-        return random_score, enrich_score
-
-
     @staticmethod
     def _generate_random_dna_seq(l=100):
         """ Generate a random DNA sequence, with length l.
@@ -216,34 +192,6 @@ class SimulatedData:
 
 
     @staticmethod
-    def _sequence_to_array(sequence):
-        """
-        This function converts a string of nucleotides in an numpy array
-
-        :param sequence:
-        :return sequence_array:
-
-
-        """
-        sequence = sequence.lower()
-        sequence = re.sub('[^acgt]', 'z', sequence)
-        sequence_array = np.array(list(sequence))
-        return sequence_array
-    
-    
-    @staticmethod
-    def _onehote(seq):
-        seq2=list()
-        mapping = {"a":[1., 0., 0., 0.], "c": [0., 1., 0., 0.], "g": [0., 0., 1., 0.], "t":[0., 0., 0., 1.]}
-        for i in seq:
-            seq2.append(mapping[i]  if i in mapping.keys() else [0., 0., 0., 0.]) 
-        return np.stack(seq2).transpose()
-
-
-    # TODO: Protein encoder that takes as input a sequences array and returns an encoded protein <- actually, should we do it here ? or during model training? 
-
-
-    @staticmethod
     def _convolve(pwm, one_hot_seq):
         """
         Computes the convolution operation between a one hot encoded sequence and a ppm
@@ -255,24 +203,3 @@ class SimulatedData:
             # For each sliding window, compute sum(ppm * seqlet) // convolution
             out[i] = np.multiply(pwm, one_hot_seq[:,i:i+W]).sum()
         return out
-
-
-
-
-""" TODO: rewrite encoder to encode the whole dataset; as it is now this method has some flaws (f.e. ATAA converts to ACAA in one hot matrix)
-    @staticmethod
-    def _onehote(sequence_array):
-        One-hot-encodes a DNA sequence
-
-        sequence (np.array): input DNA sequence in a np array format
-
-        onehot_encoded_seq (matrix): one-hot-encoded sequence
-
-        label_encoder = LabelEncoder()
-        integer_encoded = label_encoder.fit_transform(sequence_array)
-        onehot_encoder = OneHotEncoder(sparse=False, dtype=int, categories=[range(5)])
-        integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
-        onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
-        onehot_encoded = np.delete(onehot_encoded, -1, 1)
-        return onehot_encoded.transpose()
-"""
