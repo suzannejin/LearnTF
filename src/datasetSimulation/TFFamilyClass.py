@@ -106,8 +106,8 @@ class TfFamily:
                     #pos = line.split()[0]
                     tmp_list.append([ float(line.split()[1]), float(line.split()[2]), float(line.split()[3]), float(line.split()[4]) ])
                 
-            #print(ppm_array)
-            #print(ppm_list)
+            # print(ppm_array)
+            # print(ppm_list)
 
             return ppm_array, ppm_list
                 
