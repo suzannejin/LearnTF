@@ -10,6 +10,7 @@ class TfFamily:
         self.ppm_file = ppm_file
         self.prot_file = prot_file
         self.data = self.parse()
+        self.dummy_data = self.generate()
 
     def parse(self):
         TF_prot_ID, prot = self._parseProt(self.prot_file)
@@ -33,6 +34,21 @@ class TfFamily:
 
     def get_prot_sequences(self):
         return self.data["prot"].values
+
+    def get_dummy_ppms(self):
+        return self.dummy_ppms
+    
+    def get_dummy_prots(self):
+        return self.dummy_prots
+
+    def generate(self):
+        prot1 = "RGPRTTIKAKQLETLKXXXXXAAFAATPKPTRHIREQLAQETGLNMRVIQVWFQNRR"
+        prot2 = "RGPRTTIKAKQLETLKAAFAATPKPTRHIREQLAQETGLNMRVIYYYYYNRRSKERR"
+        ppm1 = np.array([[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0],[1,0,0,0]]).T.astype(float)
+        ppm2 = np.array([[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]]).T.astype(float)
+
+        self.dummy_prots = [prot1, prot2]
+        self.dummy_ppms = [ppm1, ppm2]
 
 
     @staticmethod

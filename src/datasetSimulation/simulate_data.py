@@ -38,6 +38,7 @@ class SimulatedData:
         self.l = l
         self.n = n
         self.data = self.simulate_data()
+        self.dummy_data = self.simulate_dummy_data()
 
 
     def simulate_data(self):
@@ -92,6 +93,45 @@ class SimulatedData:
         data = pd.DataFrame.from_dict(d)
         return data
 
+    def simulate_dummy_data(self, n=100, l=100):
+        """ Simulate DNA sequences and score them to each PPM for the entire TF family.
+
+        Output
+        ------
+        scores  (numpy array of float) : List scores matching a DNA sequence with a PPM
+
+        """
+        
+        base_sequence = "T"*l
+
+        # initialize data dictionary
+        d = {
+            'id'       : [],
+            'prot_seq' : [],
+            'ppm'      : [],
+            'dna_seq'  : [],
+            'label'    : []
+        }
+
+
+        # compute score for each PPM and DNA sequence
+        for i,ppm_1 in enumerate(self.TfFamily.get_dummy_ppms()):
+            for j,ppm_2 in enumerate(self.TfFamily.get_dummy_ppms()):
+                for k in range(n):
+
+                    d['id'].append(str("prot_") + str(i) + str(j) + str("seq_") + str(k) )
+                    d['prot_seq'].append( self.TfFamily.get_dummy_prots()[i] )
+                    d['ppm'].append(ppm_1)
+
+                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2)
+                    d['dna_seq'].append(seq)
+                    if i == j:
+                        d['label'].append(1)
+                    else:
+                        d['label'].append(0)
+
+        data = pd.DataFrame.from_dict(d)
+        return data
 
     def generate_list_dna_seq_for_all_ppms(self):
         """ For each PPM, generate a list of random DNA sequences enriched by the motif. 
