@@ -1,6 +1,6 @@
 import numpy as np
 import torch 
-import torch.functional as F
+import torch.nn.functional as F
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
 
@@ -55,7 +55,7 @@ def scaled_dot_product_attention(q, k, v, mask=None, verbose=False):
 # class for the transformer model
 class maTransformerBlock(nn.Module):
 
-    def __init__(self, filter_protein_size, filter_dna_size, nb_heads, dna_alphabet_size=4, protein_alphabet_size=20, chunk_size=3, n_top_chunk=10, return_attention=False):
+    def __init__(self, filter_protein_size, filter_dna_size, nb_heads, dna_alphabet_size=4, protein_alphabet_size=21, chunk_size=3, n_top_chunk=10, return_attention=False):
 
         super(maTransformerBlock, self).__init__()
         self.conv_dna   = nn.Conv2d(1,1, (dna_alphabet_size, filter_dna_size), bias=False)
@@ -63,10 +63,11 @@ class maTransformerBlock(nn.Module):
         self.nb_heads   = nb_heads
         self.chunk_size = chunk_size
         self.n_top_chunk= n_top_chunk 
-        self.linear     = nn.Linear(self.n_top_chunk, 2)
+        #self.linear     = nn.Linear(self.n_top_chunk, 2)
+        self.linear     = nn.Linear(96, 2)
         self.return_attention = return_attention
 
-    def forward(self, dna, prot):
+    def forward(self, dna, prot, verbose=False):
 
         batch_size  = dna.shape[0]
 
@@ -75,6 +76,15 @@ class maTransformerBlock(nn.Module):
         dna_conv    = F.relu(dna_conv)
         prot_conv   = self.conv_prot(prot)
         prot_conv   = F.relu(prot_conv)
+
+        if verbose:
+            print('dna_conv:', dna_conv)
+            print('prot_conv:', prot_conv)
+        
+        # print shape of dna_conv and prot_conv
+        # print('dna_conv shape:', dna_conv.shape)
+        # print('prot_conv shape:', prot_conv.shape)
+
 
         # 2 - padd dna_conv and prot_conv to have the same size
         list_dna    = list(dna_conv.reshape(batch_size, dna_conv.shape[-1]))
@@ -92,13 +102,18 @@ class maTransformerBlock(nn.Module):
 
         # 4 - apply dot product attention on concatenated chunks
         output, attention = scaled_dot_product_attention(s_p_reshape, s_d_reshape, s_d_reshape, None)
+        if verbose:
+            print('output attention:', output)
 
         # 5 - maxpooling and sort
-        out_reshaped= output.reshape(batch_size, output.shape[1]*output.shape[2])
-        max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0][:,:,:self.n_top_chunk]
+        out_reshaped= output.reshape(batch_size, 1, output.shape[1]*output.shape[2])
+        #max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0][:,:,:self.n_top_chunk]
+        #if verbose:
+        #    print('max_sorted:', max_sorted)
 
         # 6 - apply linear function to get one value
-        out         = self.linear(max_sorted.reshape(batch_size, self.n_top_chunk))
+        out         = self.linear(out_reshaped)
+
         
         if self.return_attention:
             return out, attention

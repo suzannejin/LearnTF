@@ -113,7 +113,7 @@ class SimulatedData:
                     d['prot_seq'].append( self.TfFamily.get_dummy_prots()[i] )
                     d['ppm'].append(ppm_1)
 
-                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2)
+                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2, fix_start = 25)
                     d['dna_seq'].append(seq)
                     if i == j:
                         d['label'].append(1)
@@ -158,7 +158,7 @@ class SimulatedData:
 
 
     @staticmethod
-    def _enrich_dna_seq_with_ppm(dna_seq, ppm):
+    def _enrich_dna_seq_with_ppm(dna_seq, ppm, fix_start = None):
         """ Enrich the DNA sequence with PPM. The starting position of the enriched region is also randomly selected.
 
         Params
@@ -182,7 +182,10 @@ class SimulatedData:
             chunk += current_bp
 
         # modify DNA sequence
-        start = random.choice(range(len(dna_seq)-npos))
+        if fix_start is not None:
+            start = fix_start
+        else:
+            start = random.choice(range(len(dna_seq)-npos))
         end   = start + npos
         enriched_seq = list(dna_seq)
         enriched_seq[start:end] = chunk
