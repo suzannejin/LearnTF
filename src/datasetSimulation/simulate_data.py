@@ -181,11 +181,15 @@ class SimulatedData:
             current_bp = random.choices(bps, pos_distr)
             chunk += current_bp
 
+
         # modify DNA sequence
         if fix_start is not None:
             start = fix_start
         else:
             start = random.choice(range(len(dna_seq)-npos))
+
+        # Check that the requested dna length does not crach the random choice
+        assert (len(dna_seq) > npos), "The sequence length requested is too short with respect to ppm length "
         end   = start + npos
         enriched_seq = list(dna_seq)
         enriched_seq[start:end] = chunk
