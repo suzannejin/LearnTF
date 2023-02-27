@@ -107,7 +107,7 @@ class maTransformerBlock(nn.Module):
 
         # 5 - maxpooling and sort
         out_reshaped= output.reshape(batch_size, 1, output.shape[1]*output.shape[2])
-        #max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0][:,:,:self.n_top_chunk]
+        #max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0]
         #if verbose:
         #    print('max_sorted:', max_sorted)
 
