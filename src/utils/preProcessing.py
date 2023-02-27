@@ -14,7 +14,8 @@ def encode_dna(dna, alphabet="acgt"):
     return encoder.fit_transform(dna).toarray().T
 
 # OneHot encoder for protein sequences
-def encode_protein(protein, alphabet="acdefghiklmnpqrstvwxy"):
+def encode_protein(protein, alphabet="acdefghiklmnpqrstvwyx"):
+
     protein = sequence_to_array(protein)
     encoder = OneHotEncoder(categories=[list(alphabet)])
     return encoder.fit_transform(protein).toarray().T

@@ -113,7 +113,7 @@ class SimulatedData:
                     d['prot_seq'].append( self.TfFamily.get_dummy_prots()[i] )
                     d['ppm'].append(ppm_1)
 
-                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2)
+                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2, fix_start = 25)
                     d['dna_seq'].append(seq)
                     if i == j:
                         d['label'].append(1)
@@ -158,7 +158,7 @@ class SimulatedData:
 
 
     @staticmethod
-    def _enrich_dna_seq_with_ppm(dna_seq, ppm):
+    def _enrich_dna_seq_with_ppm(dna_seq, ppm, fix_start = None):
         """ Enrich the DNA sequence with PPM. The starting position of the enriched region is also randomly selected.
 
         Params
@@ -181,11 +181,15 @@ class SimulatedData:
             current_bp = random.choices(bps, pos_distr)
             chunk += current_bp
 
+
+        # modify DNA sequence
+        if fix_start is not None:
+            start = fix_start
+        else:
+            start = random.choice(range(len(dna_seq)-npos))
+
         # Check that the requested dna length does not crach the random choice
         assert (len(dna_seq) > npos), "The sequence length requested is too short with respect to ppm length "
-
-        # modify DNA sequence    
-        start = random.choice(range(len(dna_seq)-npos))
         end   = start + npos
         enriched_seq = list(dna_seq)
         enriched_seq[start:end] = chunk
