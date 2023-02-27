@@ -54,13 +54,13 @@ def scaled_dot_product_attention(q, k, v, mask=None, verbose=False):
 
 # class for the transformer model
 class maTransformerBlock(nn.Module):
-
     def __init__(self, filter_protein_size, filter_dna_size, nb_heads, dna_alphabet_size=4, protein_alphabet_size=20, chunk_size=3, n_top_chunk=10, return_attention=False):
 
         super(maTransformerBlock, self).__init__()
         self.conv_dna   = nn.Conv2d(1,1, (dna_alphabet_size, filter_dna_size), bias=False)
         self.conv_prot  = nn.Conv2d(1,1, (protein_alphabet_size, filter_protein_size), bias=False)
         self.nb_heads   = nb_heads
+
         self.chunk_size = chunk_size
         self.n_top_chunk= n_top_chunk 
         self.linear     = nn.Linear(self.n_top_chunk, 2)
