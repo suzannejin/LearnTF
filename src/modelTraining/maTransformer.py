@@ -82,9 +82,16 @@ class maTransformerBlock(nn.Module):
             print('prot_conv:', prot_conv)
         
         # print shape of dna_conv and prot_conv
-        # print('dna_conv shape:', dna_conv.shape)
-        # print('prot_conv shape:', prot_conv.shape)
+        #print('dna_conv shape:', dna_conv.shape, 'prot_conv shape:', prot_conv.shape)
+        #print('prot_conv shape:', prot_conv.shape)
 
+        # make the future padded matrix dividable by the chunk_size  variable
+        division_remainder    = max(dna_conv.shape[-1], prot_conv.shape[-1]) % self.chunk_size
+        partial_padding_tuple = (0, (self.chunk_size - division_remainder))
+        if  division_remainder != 0 and dna_conv.shape[-1] >=  prot_conv.shape[-1]:
+            dna_conv  = F.pad(dna_conv, partial_padding_tuple, "constant", 0)
+        elif division_remainder != 0 and dna_conv.shape[-1] <  prot_conv.shape[-1]:
+            prot_conv = F.pad(prot_conv, partial_padding_tuple, "constant", 0)
 
         # 2 - padd dna_conv and prot_conv to have the same size
         list_dna    = list(dna_conv.reshape(batch_size, dna_conv.shape[-1]))
@@ -92,14 +99,15 @@ class maTransformerBlock(nn.Module):
         padded      = pad_sequence(list_dna+list_prot, batch_first=True, padding_value=0)
         dna_tensor  = padded[:batch_size,:]
         prot_tensor = padded[batch_size:,:]
-
+        
         # 3 - chunk dna_conv and prot_conv and stack
         # the resulting tensor will have shape (batch size, number chunks, chunk size)
         stacked_d   = torch.stack(torch.chunk(dna_tensor, dna_tensor.shape[1]//self.chunk_size, dim=1))
         stacked_p   = torch.stack(torch.chunk(prot_tensor, prot_tensor.shape[1]//self.chunk_size, dim=1))
         s_d_reshape = stacked_d.reshape(stacked_d.shape[1], stacked_d.shape[0], stacked_d.shape[2])
         s_p_reshape = stacked_p.reshape(stacked_p.shape[1], stacked_p.shape[0], stacked_p.shape[2])
-
+        
+    
         # 4 - apply dot product attention on concatenated chunks
         output, attention = scaled_dot_product_attention(s_p_reshape, s_d_reshape, s_d_reshape, None)
         if verbose:
@@ -112,7 +120,7 @@ class maTransformerBlock(nn.Module):
         #    print('max_sorted:', max_sorted)
 
         # 6 - apply linear function to get one value
-        out         = self.linear(out_reshaped)
+        out         =  'bubba' #self.linear(out_reshaped)
 
         
         if self.return_attention:
