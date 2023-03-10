@@ -83,7 +83,7 @@ class SimulatedData:
         return data
         
 
-    def simulate_dummy_data(self, n=100, l=100):
+    def simulate_dummy_data(self):
         """ Simulate DNA sequences and score them to each PPM for the entire TF family.
 
         Output
@@ -92,7 +92,7 @@ class SimulatedData:
 
         """
         
-        base_sequence = "T"*l
+        base_sequence = "T"*self.l
 
         # initialize data dictionary
         d = {
@@ -107,7 +107,7 @@ class SimulatedData:
         # compute score for each PPM and DNA sequence
         for i,ppm_1 in enumerate(self.TfFamily.get_dummy_ppms()):
             for j,ppm_2 in enumerate(self.TfFamily.get_dummy_ppms()):
-                for k in range(n):
+                for k in range(self.n):
 
                     d['id'].append(str("prot_") + str(i) + str(j) + str("seq_") + str(k) )
                     d['prot_seq'].append( self.TfFamily.get_dummy_prots()[i] )
