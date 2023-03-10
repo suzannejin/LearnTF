@@ -12,7 +12,7 @@ class SimulatedData:
 
     """
 
-    def __init__(self, TfFamily, l=100, n=100):
+    def __init__(self, TfFamily, l=100, n=100, fix_start=None):
         """
         For each PPM, n DNA sequences are generated randomly and enriched by the given PPM motif.
         Thus, a total of n x number of PPMs.
@@ -26,7 +26,7 @@ class SimulatedData:
         self.l = l
         self.n = n
         self.data = self.simulate_data()
-        self.dummy_data = self.simulate_dummy_data()
+        self.dummy_data = self.simulate_dummy_data(fix_start)
 
 
     def simulate_data(self):
@@ -83,7 +83,7 @@ class SimulatedData:
         return data
         
 
-    def simulate_dummy_data(self, n=100, l=100):
+    def simulate_dummy_data(self, fix_start=None):
         """ Simulate DNA sequences and score them to each PPM for the entire TF family.
 
         Output
@@ -92,7 +92,7 @@ class SimulatedData:
 
         """
         
-        base_sequence = "T"*l
+        base_sequence = "T"*self.l
 
         # initialize data dictionary
         d = {
@@ -107,13 +107,13 @@ class SimulatedData:
         # compute score for each PPM and DNA sequence
         for i,ppm_1 in enumerate(self.TfFamily.get_dummy_ppms()):
             for j,ppm_2 in enumerate(self.TfFamily.get_dummy_ppms()):
-                for k in range(n):
+                for k in range(self.n*100):
 
                     d['id'].append(str("prot_") + str(i) + str(j) + str("seq_") + str(k) )
                     d['prot_seq'].append( self.TfFamily.get_dummy_prots()[i] )
                     d['ppm'].append(ppm_1)
 
-                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2, fix_start = 25)
+                    seq = self._enrich_dna_seq_with_ppm(base_sequence, ppm_2, fix_start = fix_start)
                     d['dna_seq'].append(seq)
                     if i == j:
                         d['label'].append(1)
