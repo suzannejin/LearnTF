@@ -64,7 +64,7 @@ class maTransformerBlock(nn.Module):
         self.chunk_size = chunk_size
         self.n_top_chunk= n_top_chunk 
         #self.linear     = nn.Linear(self.n_top_chunk, 2)
-        self.linear     = nn.Linear(96, 2)
+        self.linear     = nn.Linear(96, 1)
         self.return_attention = return_attention
 
     def forward(self, dna, prot, verbose=False):
@@ -107,7 +107,7 @@ class maTransformerBlock(nn.Module):
 
         # 5 - maxpooling and sort
         out_reshaped= output.reshape(batch_size, 1, output.shape[1]*output.shape[2])
-        #max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0]
+        #max_sorted  = nn.MaxPool1d(kernel_size=self.chunk_size, stride=self.chunk_size)(out_reshaped).sort(dim=2, descending=True)[0][:,:,:self.n_top_chunk]
         #if verbose:
         #    print('max_sorted:', max_sorted)
 
