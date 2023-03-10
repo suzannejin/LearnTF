@@ -118,8 +118,8 @@ class maTransformerBlock(nn.Module):
         s_p_reshape = stacked_p.reshape(stacked_p.shape[1], stacked_p.shape[0], stacked_p.shape[2])
 
         if verbose:
-            # print('s_p_reshape', s_p_reshape.shape)
-            # print('s_d_reshape', s_d_reshape.shape)
+            print('s_p_reshape', s_p_reshape.shape)
+            print('s_d_reshape', s_d_reshape.shape)
 
 
         # 4 - apply dot product attention on concatenated chunks
