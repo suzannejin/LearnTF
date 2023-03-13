@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter # import Parameter to create custom activations with learnable parameters
 
-default_params = {
+default_params_sattention = {
     'singlehead_size': 4,
     'readout_strategy': 'mean',
     'embd_kmersize': 4,
@@ -16,9 +16,18 @@ default_params = {
     'input_channels': 4
 }
 
-class AttentionNet(nn.Module): #for the model that uses CNN, RNN (optionally), and MH attention
+###########
+# Simple self attention model with CNN and key value query layers.
+# Best RayTune parameters :
+#
+# Notes : Takes a single sequence as input.
+#
+#
+###########        
+
+class SelfAttentionNet(nn.Module): #for the model that uses CNN, RNN (optionally), and MH attention
     def __init__(self, params, device=None, genPAttn=True, reuseWeightsQK=False):
-        super(AttentionNet, self).__init__()
+        super(SelfAttentionNet, self).__init__()
 
         self.SingleHeadSize = params['singlehead_size'] #SingleHeadSize
         self.readout_strategy = params['readout_strategy']
@@ -75,7 +84,7 @@ class AttentionNet(nn.Module): #for the model that uses CNN, RNN (optionally), a
             output = output.sum(axis=1)
             output = (output-output.mean())/output.std()
 
-        #output = self.fc3(output)	
+        output = self.fc3(output.permute(0,2,1))	
         assert not torch.isnan(output).any()
         if self.genPAttn:
             return output, query, key, value, conv_out, pAttn_concat
