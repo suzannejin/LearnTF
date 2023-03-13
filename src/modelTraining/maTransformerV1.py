@@ -81,3 +81,5 @@ class AttentionNet(nn.Module): #for the model that uses CNN, RNN (optionally), a
             return output, query, key, value, conv_out, pAttn_concat
         else:
             return output
+        
+        
