@@ -1,17 +1,15 @@
-import sys 
-sys.path.insert(1, "/Users/mgrapotte/LabWork/LearnTF/" )
+
 
 import numpy as np
 import os
 import ray.tune as tune
 from ray.tune.schedulers import ASHAScheduler
-from maTransformerV1 import *
 from torch.utils.data import random_split, Dataset, DataLoader
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, roc_auc_score
-
+from src.datasetSimulation.simulate_data import *
 from src.datasetSimulation.TFFamilyClass import *
 from src.utils.preProcessing import *
 
@@ -45,7 +43,7 @@ class convDNA(nn.Module):
         return(dna_conv)
 
 def loadDummyData(batch_size, label1=5):
-    tf_object = TfFamily("data/raw_data/PWM.txt", "data/raw_data/prot_seq.txt")
+    tf_object = TfFamily("/Users/mgrapotte/LabWork/LearnTF/data/raw_data/PWM.txt", "/Users/mgrapotte/LabWork/LearnTF/data/raw_data/prot_seq.txt")
     data = SimulatedData(tf_object, n=100)
     seqs = data.dummy_data['dna_seq'].values
     label = []
@@ -102,9 +100,11 @@ def train(config, checkpoint_dir=None, data_dir=None):
         optimizer.load_state_dict(optimizer_state)
 
     # train model
-    for epoch in range(50):
+    for epoch in range(1):
         train_loss = 0.0
         train_steps = 0
+        pred = []
+        true = []
         for i, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]
             dna, prot, labels = data
@@ -113,6 +113,8 @@ def train(config, checkpoint_dir=None, data_dir=None):
             optimizer.zero_grad()
             # forward + backward + optimize
             outputs = net(dna)
+            true += labels.tolist()
+            pred += outputs.tolist()
             loss = criterion(outputs, labels.view(-1,1).float())
             loss.backward()
             optimizer.step()
@@ -124,11 +126,35 @@ def train(config, checkpoint_dir=None, data_dir=None):
                     path = os.path.join(checkpoint_dir, "checkpoint")
                     torch.save(
                         (net.state_dict(), optimizer.state_dict()), path)
-        tune.report(loss=(train_loss / train_steps)) #TODO , accuracy=spearmanr(true, pred)[0])   
+        tune.report(loss=(train_loss / train_steps))# , accuracy=_roc_accuracy(true, pred, 5)[0])   
 
+# Accuracy function 
+def _Find_Optimal_Cutoff(target, predicted, pos_label):
+    """ Find the optimal probability cutoff point for a classification model related to event rate
+    Parameters
+    ----------
+    target : Matrix with dependent or target data, where rows are observations
 
-def roc_accuracy(labels, pred, pos_label):
-    return roc_auc_score(labels, pred, pos_label)
+    predicted : Matrix with predicted data, where rows are observations
+
+    Returns
+    -------     
+    list type, with optimal cutoff value
+        
+    """
+    fpr, tpr, threshold = roc_curve(target, predicted, pos_label = pos_label)
+    i = np.arange(len(tpr)) 
+    roc = pd.DataFrame({'tf' : pd.Series(tpr-(1-fpr), index=i), 'threshold' : pd.Series(threshold, index=i)})
+    roc_t = roc.iloc[(roc.tf-0).abs().argsort()[:1]]
+    return list(roc_t['threshold']) 
+
+def _roc_accuracy(labels, pred, pos_label):
+    return roc_auc_score(labels, pred, pos_label=pos_label)
+
+def _mcc_accuracy(labels,pred, pos_label): 
+    threshold = Find_Optimal_Cutoff(labels,pred,pos_label)
+    pred_binary = [ 0 if i < threshold else pos_label for i in pred]
+    return matthews_corrcoef(labels, pred_binary)
 
 
 def main():
@@ -157,7 +183,7 @@ def main():
 
     # define search algorithm
     scheduler = ASHAScheduler(
-        max_t=10,  # number of epochs to train per trial
+        max_t=20,  # number of epochs to train per trial
         grace_period=1,
         reduction_factor=2)
 
@@ -167,7 +193,7 @@ def main():
         metric="loss",
         mode="min",
         config=config,
-        num_samples=10,
+        num_samples=20,
         scheduler=scheduler)
 
     # print best hyperparameters
